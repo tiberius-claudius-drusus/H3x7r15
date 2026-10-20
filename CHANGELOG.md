@@ -1,0 +1,23 @@
+# Changelog — H3x7r15
+
+Format : une entrée par version, la plus récente en premier.
+
+## [1.0.0] - 2026-10-20
+
+**Première version publique** (décision de l'Auctor : 1.0.0 au premier envoi sur GitHub, comme pour T-7r4V3x et 5ud0ku). Elle reprend sans changement de comportement la 0.4.0, essayée sur téléphone par l'Auctor. Récapitulatif : modèle du jeu séparé du dessin et **rejoué image par image sur le code d'origine** de Hextris (4 parties, réglages tactile et ordinateur, jusqu'à la fin de partie) ; dessin sur canvas à la géométrie de l'amont ; commandes tactiles et clavier (droite = sens horaire, gauche = anti-horaire, option pour inverser) ; accueil et bandeau calqués sur 5ud0ku et 1-5731N ; quatre familles de thèmes clairs et foncés et mode daltonien ; vingt langues (traductions de Drusus, sans relecture native) ; partie enregistrée et reprise exacte, pause automatique ; statistiques ; application installable et hors ligne. Retiré de l'amont : jQuery et autres bibliothèques, polices, images, suivi d'audience, envoi du score à un serveur (l'application ne contacte aucun serveur). Cette version n'ayant jamais été publiée, elle a reçu avant son premier envoi les corrections d'un **audit de code de Claudius** (sous Opus), sans changer de numéro. **Moyen** : la difficulté montait 34 à 46 % plus vite sur un écran à 120 ou 144 Hz que sur un écran à 60 Hz (l'amont avance d'une étape par image affichée) ; la simulation fait maintenant toujours 60 étapes par seconde (`src/pasfixe.js`), l'affichage suit l'écran, et un test simule 3 minutes à 60, 90, 120 et 144 Hz et exige la même difficulté ; à 60 Hz le comportement reste celui de l'amont (les parties de référence restent identiques). **Décision de l'Auctor (D2)** : les records, moyennes, classements et le nombre de parties commencées sont **séparés par profil** (tactile et ordinateur n'ont pas les mêmes réglages) ; les statistiques déjà enregistrées sont reprises. **Faibles** : l'accélération de la flèche du bas ne reste plus bloquée quand la touche est relâchée hors de la page (F1) ; la durée d'une partie est la durée réelle, plus celle de l'horloge du jeu qui avance quatre fois plus vite avec la flèche du bas (F2) ; la boîte « Partie terminée » ne s'ouvre plus sur l'accueil si l'on y est déjà retourné (F3) ; le score est annoncé aux lecteurs d'écran, au plus toutes les 5 secondes et à la fin (F4). 79 tests unitaires, 59 contrôles dans Chrome.
+
+## [0.4.0] - 2026-10-20
+
+Demande de l'Auctor : **sens de rotation explicite et option pour inverser les commandes**. Par défaut, comme l'amont : toucher (ou flèche, ou A) à **gauche** = rotation de l'hexagone dans le sens **anti-horaire** ; à **droite** = sens **horaire**. Une nouvelle option « Inverser les commandes (gauche et droite) » échange les deux, au toucher et au clavier ; elle est mémorisée. Un test fixe le sens à l'écran (produit vectoriel des positions d'un bloc avant et après la rotation) pour que la convention ne dérive pas. Tests de session (préférences, sauvegarde, reprise, fin de partie) ajoutés : 66 tests unitaires.
+
+## [0.3.0] - 2026-10-20
+
+**Vingt langues** : les mêmes que 5ud0ku, dont l'arabe écrit de droite à gauche. Les textes sont de la main de Drusus (français et anglais de référence), sans relecture par des locuteurs natifs (l'arabe, l'hindi et le latin en particulier) ; les libellés communs avec 5ud0ku en reprennent les traductions. Un test vérifie que chaque langue a les mêmes clés et les mêmes paramètres que le français.
+
+## [0.2.0] - 2026-10-20
+
+**Première version jouable.** Dessin sur canvas (même géométrie que l'amont : anneau, blocs en trapèzes, minuteur de combo sur le contour, secousses, textes flottants), commandes tactiles (gauche ou droite de l'écran) et clavier (flèches, A/D, flèche du bas ou S pour accélérer, P ou espace pour la pause, un pas de rotation toutes les 75 ms au clavier comme l'amont), accueil et bandeau de partie calqués sur 5ud0ku et 1-5731N, quatre familles de thèmes clairs et foncés, mode daltonien (palette de l'amont), partie enregistrée et reprise exacte (aléa compris), pause automatique quand la page est cachée, statistiques (scores, durées), français et anglais, application installable et hors ligne. Réglages « tactile » et « ordinateur » de l'amont au choix (par défaut selon l'écran).
+
+## [0.1.0] - 2026-10-20
+
+Modèle du jeu (`src/game.js`, `src/wavegen.js`), séparé du dessin : le code d'origine tourne dans un bac à sable avec une graine fixe (`tools/reference-upstream.mjs`) et quatre parties de 3 300 à 8 400 images, profils tactile et ordinateur, sont rejouées image par image sur le modèle (`test/amont.test.js`) : score, blocs, horloge et fin de partie identiques.

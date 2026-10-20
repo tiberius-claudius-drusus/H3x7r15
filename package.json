@@ -1,0 +1,12 @@
+{
+  "name": "h3x7r15",
+  "version": "1.0.0",
+  "description": "H3x7r15 : portage PWA de Hextris",
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "e2e": "node tools/e2e-chrome.mjs"
+  }
+}

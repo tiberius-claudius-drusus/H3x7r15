@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>H3x7r15</title>
+<meta name="description" content="Portage PWA de Hextris.">
+<meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16181d" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+/* CSS en ligne : le nginx du portail sert les .css en application/octet-stream (Chrome refuse la feuille). */
+:root{
+  --bg:#f5f6f8;--fg:#1c1f26;--muted:#5f6678;--panel:#fff;--line:#c4c9d4;--line-strong:#1c1f26;
+  --cell:#fff;--err:#c62828;--acc:#2456b8;--accfg:#fff;--shadow:0 1px 3px rgba(0,0,0,.18);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181d;--fg:#e6e8ee;--muted:#9aa1b3;--panel:#20232b;--line:#3a3f4d;--line-strong:#c9cedb;
+    --cell:#1d2027;--err:#ff6b6b;--acc:#7fa6ff;--accfg:#10131a;--shadow:0 1px 3px rgba(0,0,0,.6);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);background-image:var(--bg-image,none);background-attachment:fixed;color:var(--fg);
+  font-size:16px;line-height:1.35;font-family:var(--ui-font,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif);
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:var(--btn-radius,10px);
+  -webkit-backdrop-filter:var(--bf,none);backdrop-filter:var(--bf,none);
+  min-height:44px;padding:6px 12px;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
+button.primary{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+#app{display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;min-height:100%;
+  padding:max(10px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+/* Bandeau de la partie, calqué sur 5ud0ku et 1-5731N : menu à gauche, puis le score (accent, gras) avec le meilleur score en petit
+   dessous, et la pause à droite. */
+header{width:min(100%,720px);display:flex;align-items:center;gap:8px;flex:none}
+header .grow{flex:1}
+#g-info{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1.1;min-width:0}
+#score{font-variant-numeric:tabular-nums;font-size:1.15rem;color:var(--acc);font-weight:600}
+#g-best{display:block;padding:2px 0 0;font:600 .64rem/1 var(--ui-font,system-ui,sans-serif);letter-spacing:.04em;color:var(--muted)}
+.iconbtn{width:44px;padding:0}
+/* Le canvas occupe tout l'espace restant ; le jeu en choisit l'échelle d'après sa plus petite dimension (comme l'amont). */
+#stage{position:relative;flex:1;min-height:0;width:100%;max-width:900px}
+#canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hint{position:absolute;left:8%;right:8%;bottom:4%;margin:0;text-align:center;font-size:.92rem;color:var(--muted);pointer-events:none;transition:opacity .6s}
+#hint[hidden]{display:none}
+#hint.off{opacity:0}
+#pause{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);font-size:1.3rem}
+#pause[hidden]{display:none}
+@media (min-width:900px) and (min-aspect-ratio:5/4){
+  #app{padding-top:max(14px,env(safe-area-inset-top))}
+}
+dialog{border:1px solid var(--line-strong);border-radius:calc(var(--btn-radius,10px) + 4px);background:var(--panel);color:var(--fg);padding:18px;max-width:min(92vw,440px);width:100%;box-shadow:0 10px 40px rgba(0,0,0,.35);
+  -webkit-backdrop-filter:var(--bf,none);backdrop-filter:var(--bf,none);font-family:inherit;user-select:text;-webkit-user-select:text}
+dialog::backdrop{background:var(--veil,rgba(0,0,0,.45))}
+dialog h2{margin:0 0 10px;font-size:1.15rem;letter-spacing:var(--h2-spacing,normal);text-transform:var(--h2-transform,none)}
+dialog p{margin:8px 0}
+.menu{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.row button{flex:1}
+.opt{display:flex;align-items:center;gap:10px;padding:8px 0;min-height:44px}
+.opt input[type=checkbox]{width:22px;height:22px;flex:none}
+.opt select{margin-left:auto;font:inherit;padding:6px;border-radius:8px;min-height:40px;background:var(--cell);color:var(--fg);border:1px solid var(--line);max-width:55%}
+a{color:var(--acc)}
+/* Page d'accueil : visible seulement hors partie (body[data-view="home"]) ; en partie, c'est le jeu qui l'est. */
+body[data-view="game"] #home{display:none}
+body[data-view="home"] header,body[data-view="home"] #stage{display:none}
+/* Accueil calqué sur 5ud0ku (lui-même calqué sur 1-5731N) : colonne centrée, logo de 21 % de la hauteur, titre de 2,6 rem en couleur
+   d'accent, menu large de min(78vw, 300px), et en bas deux lignes d'information. */
+body[data-view="home"] #app{min-height:100vh;min-height:100dvh;padding-top:max(0px,env(safe-area-inset-top));padding-bottom:max(0px,env(safe-area-inset-bottom))}
+#home{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;gap:0;padding:0 10px;text-align:center}
+.logo{display:block;flex:none;height:clamp(96px,21vh,200px);height:clamp(96px,21dvh,200px);aspect-ratio:1;width:auto;margin:auto 0 4px;filter:drop-shadow(var(--shadow-logo,0 2px 6px rgba(0,0,0,.18)))}
+.logo svg{width:100%;height:100%;display:block}
+#home h1{margin:0;font-size:2.6rem;color:var(--acc);letter-spacing:.04em;font-weight:700;line-height:1.1}
+.homemenu{display:flex;flex-direction:column;gap:12px;width:min(78vw,300px);margin-top:1.4em}
+.big{width:100%;font-size:1.15rem;padding:12px}
+.big[hidden]{display:none}
+.foot{flex:none;margin:auto 0 0;padding:18px 12px 10px;font-size:.72rem;line-height:1.5;color:var(--muted);text-align:center}
+.foot a{color:inherit}
+#h-ver{direction:ltr;unicode-bidi:isolate}   /* ligne technique à jetons latins : sens fixe, même en arabe */
+dialog>.row:last-child{position:sticky;bottom:-18px;background:var(--panel);padding-top:8px;margin-top:10px}  /* « Fermer » reste visible quand le dialogue défile */
+.hint{margin:8px 0 0;font-size:.85rem;color:var(--muted)}
+.stats table{width:100%;border-collapse:collapse;margin:6px 0 10px}
+.stats th,.stats td{padding:6px 4px;text-align:left;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.stats th{font-weight:600;color:var(--muted);font-size:.8rem}
+.stats td:last-child,.stats th:last-child{text-align:right}
+.stats h3{margin:14px 0 2px;font-size:.95rem}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="home" aria-labelledby="home-title">
+    <div id="logo" class="logo"></div>
+    <h1 id="home-title">H3x7r15</h1>
+    <nav class="homemenu">
+      <button id="h-new" class="big"></button>
+      <button id="h-continue" class="big" hidden></button>
+      <button id="h-options" class="big"></button>
+      <button id="h-stats" class="big"></button>
+      <button id="h-help" class="big"></button>
+    </nav>
+    <p class="foot" id="h-foot"><span id="h-ver"></span><br><span id="h-inspired"></span></p>
+  </section>
+  <header>
+    <button id="b-menu" class="iconbtn"></button>
+    <span id="g-info"><span id="score" aria-live="off">0</span><span id="g-best"></span></span>
+    <span class="grow"></span>
+    <button id="b-pause" class="iconbtn"></button>
+  </header>
+  <main id="stage">
+    <canvas id="canvas" aria-label="H3x7r15" role="img"></canvas>
+    <p id="hint" hidden></p>
+    <div id="pause" hidden><span id="pause-text"></span><button id="b-resume" class="primary"></button></div>
+  </main>
+  <div id="live" class="sr" aria-live="polite"></div>
+</div>
+
+<dialog id="menu" aria-labelledby="menu-title">
+  <h2 id="menu-title"></h2>
+  <div class="menu">
+    <button id="m-resume" class="primary"></button>
+    <button id="m-home"></button>
+    <button id="m-restart"></button>
+    <button id="m-stats"></button>
+    <button id="m-options"></button>
+    <button id="m-help"></button>
+    <button id="m-about"></button>
+  </div>
+</dialog>
+
+<dialog id="over" aria-labelledby="over-title">
+  <h2 id="over-title"></h2>
+  <p id="over-score"></p>
+  <p id="over-record"></p>
+  <div class="row"><button id="over-close"></button><button id="over-new" class="primary"></button></div>
+</dialog>
+
+<dialog id="stats" aria-labelledby="stats-title">
+  <h2 id="stats-title"></h2>
+  <div id="stats-body" class="stats"></div>
+  <div class="row"><button id="stats-reset"></button><button id="stats-close" class="primary"></button></div>
+</dialog>
+
+<dialog id="options" aria-labelledby="options-title">
+  <h2 id="options-title"></h2>
+  <div id="options-body"></div>
+  <div class="row"><button id="options-close" class="primary"></button></div>
+</dialog>
+
+<dialog id="help" aria-labelledby="help-title">
+  <h2 id="help-title"></h2>
+  <p id="help-1"></p><p id="help-2"></p><p id="help-3"></p><p id="help-4"></p>
+  <div class="row"><button id="help-about"></button><button id="help-close" class="primary"></button></div>
+</dialog>
+
+<dialog id="about" aria-labelledby="about-title">
+  <h2 id="about-title"></h2>
+  <p id="about-text"></p>
+  <p id="about-version"></p>
+  <p><a id="about-code" href="https://github.com/tiberius-claudius-drusus/H3x7r15" target="_blank" rel="noopener"></a> · <a id="about-licence" href="LICENSE.txt" target="_blank" rel="noopener"></a></p>
+  <div class="row"><button id="about-close" class="primary"></button></div>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
